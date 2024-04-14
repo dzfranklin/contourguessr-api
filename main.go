@@ -84,7 +84,9 @@ func main() {
 	mux.Handle("GET /api/v1/picture/{region}/{id}", http.HandlerFunc(PictureHandler))
 	mux.HandleFunc("/", NotFoundHandler)
 
-	err := http.ListenAndServe(":80", mux)
+	addr := ":80"
+	log.Println("Listening on", addr)
+	err := http.ListenAndServe(addr, mux)
 	if err != nil {
 		panic(err)
 	}
