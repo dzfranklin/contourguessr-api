@@ -14,7 +14,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: api-ingress
+  name: api-ingress-https
   namespace: contourguessr
   labels:
     app: api-server
@@ -36,6 +36,25 @@ spec:
     - hosts:
         - "api.contourguessr.org"
       secretName: api-cert
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress-http
+  namespace: contourguessr
+  labels:
+    app: api-server
+spec:
+  rules:
+    - host: "api.contourguessr.org"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port: { name: http }
 ---
 apiVersion: v1
 kind: Service
