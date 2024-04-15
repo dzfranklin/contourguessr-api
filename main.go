@@ -124,7 +124,8 @@ func main() {
 	}
 }
 
-func RegionListHandler(w http.ResponseWriter, _ *http.Request) {
+func RegionListHandler(w http.ResponseWriter, r *http.Request) {
+	AllowCORS(w, r)
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(regionData); err != nil {
@@ -133,6 +134,7 @@ func RegionListHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func PictureHandler(w http.ResponseWriter, r *http.Request) {
+	AllowCORS(w, r)
 	region := r.PathValue("region")
 	id := r.PathValue("id")
 	if region == "" || id == "" {
@@ -158,6 +160,11 @@ func PictureHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(data)
+}
+
+func AllowCORS(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "*")
 }
 
 func NotFoundHandler(w http.ResponseWriter, _ *http.Request) {
