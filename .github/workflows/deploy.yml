@@ -47,8 +47,7 @@ jobs:
           KUBECONFIG: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p "$HOME/.kube"
-          echo $KUBECONFIG
-          echo $KUBECONFIG | base64 --decode > "$HOME/.kube/config"
+          echo $KUBECONFIG | tr -d '[:space:]' | base64 --decode > "$HOME/.kube/config"
 
       - uses: actions/checkout@v4
 
