@@ -34,7 +34,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/dzfranklin/contourguessr-api:latest
-            ghcr.io/dzfranklin/contourguessr-api:${{ event.run_id }}
+            ghcr.io/dzfranklin/contourguessr-api:${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha
   deploy:
@@ -57,4 +57,4 @@ jobs:
           manifests: |
             infra/deployment.yaml
           images: |
-            ghcr.io/dzfranklin/contourguessr-api:${{ event.run_id }}
+            ghcr.io/dzfranklin/contourguessr-api:${{ github.run_id }}
