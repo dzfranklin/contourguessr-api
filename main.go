@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -79,13 +80,22 @@ func init() {
 }
 
 func main() {
+	hostname := os.Getenv("HOSTNAME")
+	if hostname == "" {
+		hostname = "localhost"
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := hostname + ":" + port
+	log.Println("Listening on", addr)
+
 	mux := http.NewServeMux()
 	mux.Handle("GET /api/v1/region", http.HandlerFunc(RegionListHandler))
 	mux.Handle("GET /api/v1/picture/{region}/{id}", http.HandlerFunc(PictureHandler))
 	mux.HandleFunc("/", NotFoundHandler)
 
-	addr := ":80"
-	log.Println("Listening on", addr)
 	err := http.ListenAndServe(addr, mux)
 	if err != nil {
 		panic(err)
