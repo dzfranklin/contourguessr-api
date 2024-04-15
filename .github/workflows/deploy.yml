@@ -25,6 +25,11 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: 'eu-west-2'
 
+      - name: Debug
+        run: |
+            ls -la
+            ls -la data
+
       - uses: docker/build-push-action@v3
         name: Build and push the docker image
         with:
