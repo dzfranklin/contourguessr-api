@@ -123,7 +123,7 @@ func PictureHandler(w http.ResponseWriter, r *http.Request) {
 			NotFoundHandler(w, r)
 			return
 		}
-		id := pictures[rand.Intn(len(pictures))]
+		id = pictures[rand.Intn(len(pictures))]
 		w.Header().Set("Location", "/api/v1/picture/"+region+"/"+id)
 		w.WriteHeader(http.StatusFound)
 		return
