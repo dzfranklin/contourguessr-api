@@ -80,15 +80,15 @@ func init() {
 }
 
 func main() {
-	hostname := os.Getenv("HOSTNAME")
-	if hostname == "" {
-		hostname = "localhost"
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "localhost"
 	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	addr := hostname + ":" + port
+	addr := host + ":" + port
 	log.Println("Listening on", addr)
 
 	mux := http.NewServeMux()
