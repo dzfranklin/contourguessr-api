@@ -33,7 +33,28 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/contourguessr-api:latest
-            ghcr.io/${{ github.repository_owner }}/contourguessr-api:${{ github.sha }}
+            ghcr.io/dzfranklin/contourguessr-api:latest
+            ghcr.io/dzfranklin/contourguessr-api:${{ event.run_id }}
           cache-from: type=gha
           cache-to: type=gha
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up kubectl
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo $KUBECONFIG | base64 --decode > "$HOME/.kube/config"
+
+      - uses: actions/checkout@v4
+
+      - name: Deploy to k8s
+        uses: azure/k8s-deploy@v1
+        with:
+          namespace: contourguessr
+          manifests: |
+            infra/deployment.yaml
+          images: |
+            ghcr.io/dzfranklin/contourguessr-api:${{ event.run_id }}

@@ -92,8 +92,15 @@ func main() {
 	log.Println("Listening on", addr)
 
 	mux := http.NewServeMux()
+
 	mux.Handle("GET /api/v1/region", http.HandlerFunc(RegionListHandler))
 	mux.Handle("GET /api/v1/picture/{region}/{id}", http.HandlerFunc(PictureHandler))
+
+	mux.Handle("GET /healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("OK"))
+	}))
+
 	mux.HandleFunc("/", NotFoundHandler)
 
 	err := http.ListenAndServe(addr, mux)
