@@ -80,6 +80,21 @@ func init() {
 }
 
 func main() {
+	log.Print("Starting server...")
+
+	log.Print("Available regions:")
+	for _, data := range regionData {
+		var region struct {
+			Id   string `json:"id"`
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(data, &region); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("  %s: %d pictures", region.Name, len(pictureList[region.Id]))
+	}
+	log.Print("")
+
 	host := os.Getenv("HOST")
 	if host == "" {
 		host = "localhost"
