@@ -9,8 +9,6 @@ COPY go.* ./
 RUN go mod download
 
 COPY . ./
-RUN ls -la
-RUN ls -la ./data
 RUN go build -race -o /out/contourguessr-api .
 
 FROM debian:bookworm
