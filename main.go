@@ -10,26 +10,49 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"strings"
 )
 
-//go:embed data
-var dataDir embed.FS
+var appEnv = os.Getenv("APP_ENV")
+
+//go:embed regions
+var regionsEmbed embed.FS
 
 var regionData []json.RawMessage
 var pictureData = make(map[string]map[string]json.RawMessage)
 var pictureList = make(map[string][]string)
 
 func init() {
-	regionFiles, err := fs.ReadDir(dataDir, "data/regions")
+	dataDir := os.Getenv("DATA_DIR")
+	if appEnv == "dev" {
+		if dataDir == "" {
+			dataDir = "./sample_data"
+		}
+	}
+	if dataDir == "" {
+		log.Fatal("DATA_DIR not set")
+	}
+
+	regionSet := make(map[string]struct{})
+	regionFiles, err := fs.ReadDir(regionsEmbed, "regions")
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, regionFile := range regionFiles {
-		contents, err := fs.ReadFile(dataDir, "data/regions/"+regionFile.Name())
+		contents, err := fs.ReadFile(regionsEmbed, "regions/"+regionFile.Name())
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		var parsed struct {
+			Id string `json:"id"`
+		}
+		if err := json.Unmarshal(contents, &parsed); err != nil {
+			log.Fatal(err)
+		}
+		regionSet[parsed.Id] = struct{}{}
+		pictureList[parsed.Id] = make([]string, 0)
+		pictureData[parsed.Id] = make(map[string]json.RawMessage)
+
 		var data json.RawMessage
 		if err := json.Unmarshal(contents, &data); err != nil {
 			log.Fatal(err)
@@ -37,45 +60,35 @@ func init() {
 		regionData = append(regionData, data)
 	}
 
-	pictureFiles, err := fs.ReadDir(dataDir, "data/pictures")
+	picturesFile, err := os.ReadFile(dataDir + "/pictures.ndjson")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to read pictures.ndjson", err)
 	}
-	for _, pictureFile := range pictureFiles {
-		region := strings.TrimSuffix(pictureFile.Name(), ".ndjson")
-		contents, err := fs.ReadFile(dataDir, "data/pictures/"+pictureFile.Name())
-		if err != nil {
+	dec := json.NewDecoder(bytes.NewReader(picturesFile))
+	for {
+		var data json.RawMessage
+		if err := dec.Decode(&data); err != nil {
+			if err == io.EOF {
+				break
+			}
 			log.Fatal(err)
 		}
-		dec := json.NewDecoder(bytes.NewReader(contents))
 
-		var regionPictureList []string
-		regionPictures := make(map[string]json.RawMessage)
-		for {
-			var data json.RawMessage
-			if err := dec.Decode(&data); err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Fatal(err)
-			}
-
-			var dataWithId struct {
-				ID string `json:"id"`
-			}
-			if err := json.Unmarshal(data, &dataWithId); err != nil {
-				log.Fatal(err)
-			}
-			id := dataWithId.ID
-
-			regionPictureList = append(regionPictureList, id)
-			regionPictures[id] = data
+		var parsed struct {
+			Region string `json:"region"`
+			ID     string `json:"id"`
 		}
-		if len(regionPictureList) == 0 {
-			log.Printf("No pictures found for region %s", region)
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			log.Fatal(err)
 		}
-		pictureData[region] = regionPictures
-		pictureList[region] = regionPictureList
+
+		if _, ok := regionSet[parsed.Region]; !ok {
+			log.Printf("Skipping picture %s in unknown region %s", parsed.ID, parsed.Region)
+			continue
+		}
+
+		pictureList[parsed.Region] = append(pictureList[parsed.Region], parsed.ID)
+		pictureData[parsed.Region][parsed.ID] = data
 	}
 }
 

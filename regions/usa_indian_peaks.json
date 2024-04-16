@@ -1,0 +1,16 @@
+{
+  "id": "usa_indian_peaks",
+  "name": "Indian Peaks Wilderness (USA)",
+  "logo": "https://contourguessr-region-logos.s3.eu-west-2.amazonaws.com/usfs_logo.svg",
+  "bbox": [
+    -105.766068,
+    39.955017,
+    -105.582733,
+    40.150538
+  ],
+  "tiles": {
+    "capabilities": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_FSTopo_01/MapServer/WMTS/1.0.0/WMTSCapabilities.xml",
+    "layer": "EDW_EDW_FSTopo_01",
+    "matrixSet": "default028mm"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "uk_lake_district",
+  "name": "Lake District (UK)",
+  "logo": "https://contourguessr-region-logos.s3.eu-west-2.amazonaws.com/uk_lake_district_logo.gif",
+  "bbox": [
+    -3.283539,
+    54.409340,
+    -2.896271,
+    54.611846
+  ],
+  "tiles": {
+    "capabilities": "https://api.os.uk/maps/raster/v1/wmts?request=getcapabilities&service=WMTS&key=zr5c2eAF5GgLTTbOqOBQ4sphVZSGYCy6",
+    "layer": "Leisure_27700",
+    "matrixSet": "EPSG:27700"
+  }
+}
