@@ -1,12 +1,12 @@
 {
-  "id": "uk_lake_district",
-  "name": "Lake District National Park (UK)",
-  "logo": "https://region-logos.contourguessr.org/uk_lake_district_logo.gif",
+  "id": "uk_snowdonia",
+  "name": "Eryri (Snowdonia) (UK)",
+  "logo": "https://region-logos.contourguessr.org/uk_snowdonia_logo.gif",
   "bbox": [
-    -3.283539,
-    54.409340,
-    -2.896271,
-    54.611846
+    -4.343719,
+    52.342052,
+    -3.595276,
+    53.283280
   ],
   "tiles": {
     "capabilities": "https://api.os.uk/maps/raster/v1/wmts?request=getcapabilities&service=WMTS&key=zr5c2eAF5GgLTTbOqOBQ4sphVZSGYCy6",

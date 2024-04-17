@@ -1,0 +1,23 @@
+{
+  "id": "usa_yosemite",
+  "name": "Yosemite National Park (USA)",
+  "bbox": [
+    -119.886932,
+    37.582677,
+    -119.185181,
+    38.202576
+  ],
+  "tiles": {
+    "capabilities": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/WMTS/1.0.0/WMTSCapabilities.xml",
+    "layer": "USGSTopo",
+    "matrixSet": "default028mm",
+    "resolutions": [
+      38.21851414253181,
+      19.109257071265905,
+      9.554628535632952,
+      4.777314267948769,
+      2.3886571339743843
+    ],
+    "defaultResolution": 9.554628535632952
+  }
+}

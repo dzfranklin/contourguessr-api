@@ -1,0 +1,20 @@
+{
+  "id": "usa_brooks",
+  "name": "Brooks Range (USA)",
+  "bbox": [
+    -164.794922,
+    66.661684,
+    -141.547852,
+    69.232789
+  ],
+  "tiles": {
+    "capabilities": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/WMTS/1.0.0/WMTSCapabilities.xml",
+    "layer": "USGSTopo",
+    "matrixSet": "default028mm",
+    "resolutions": [
+      38.21851414253181, 19.109257071265905, 9.554628535632952,
+      4.777314267948769, 2.3886571339743843
+    ],
+    "defaultResolution": 9.554628535632952
+  }
+}

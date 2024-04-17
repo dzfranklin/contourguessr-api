@@ -1,0 +1,23 @@
+{
+  "id": "usa_denali",
+  "name": "Denali National Park and Preserve (USA)",
+  "bbox": [
+    -152.479248,
+    62.689269,
+    -149.128418,
+    64.000052
+  ],
+  "tiles": {
+    "capabilities": "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/WMTS/1.0.0/WMTSCapabilities.xml",
+    "layer": "USGSTopo",
+    "matrixSet": "default028mm",
+    "resolutions": [
+      38.21851414253181,
+      19.109257071265905,
+      9.554628535632952,
+      4.777314267948769,
+      2.3886571339743843
+    ],
+    "defaultResolution": 9.554628535632952
+  }
+}

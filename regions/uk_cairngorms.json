@@ -1,12 +1,12 @@
 {
-  "id": "uk_lake_district",
-  "name": "Lake District National Park (UK)",
-  "logo": "https://region-logos.contourguessr.org/uk_lake_district_logo.gif",
+  "id": "uk_cairngorms",
+  "name": "Cairngorms National Park (UK)",
+  "logo": "https://region-logos.contourguessr.org/uk_cairngorms_logo.gif",
   "bbox": [
-    -3.283539,
-    54.409340,
-    -2.896271,
-    54.611846
+    -4.141846,
+    56.782827,
+    -2.982788,
+    57.338381
   ],
   "tiles": {
     "capabilities": "https://api.os.uk/maps/raster/v1/wmts?request=getcapabilities&service=WMTS&key=zr5c2eAF5GgLTTbOqOBQ4sphVZSGYCy6",
