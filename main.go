@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 )
 
 var appEnv = os.Getenv("APP_ENV")
@@ -59,6 +60,18 @@ func init() {
 		}
 		regionData = append(regionData, data)
 	}
+	sort.Slice(regionData, func(i, j int) bool {
+		var a, b struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(regionData[i], &a); err != nil {
+			log.Fatal(err)
+		}
+		if err := json.Unmarshal(regionData[j], &b); err != nil {
+			log.Fatal(err)
+		}
+		return a.Name < b.Name
+	})
 
 	picturesFile, err := os.ReadFile(dataDir + "/pictures.ndjson")
 	if err != nil {
