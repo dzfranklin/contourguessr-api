@@ -11,6 +11,13 @@
   "tiles": {
     "capabilities": "https://api.os.uk/maps/raster/v1/wmts?request=getcapabilities&service=WMTS&key=zr5c2eAF5GgLTTbOqOBQ4sphVZSGYCy6",
     "layer": "Leisure_27700",
-    "matrixSet": "EPSG:27700"
+    "matrixSet": "EPSG:27700",
+    "resolutions": [
+      13.999999997795275,
+      6.999999998897637,
+      3.4999999994488187,
+      1.7499999997244093
+    ],
+    "defaultResolution": 6.999999998897637
   }
 }
