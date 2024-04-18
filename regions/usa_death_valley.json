@@ -19,6 +19,7 @@
       4.777314267948769,
       2.3886571339743843
     ],
-    "defaultResolution": 9.554628535632952
+    "defaultResolution": 9.554628535632952,
+    "extraAttributions": ["USGS The National Map: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road data; Natural Earth Data; U.S. Department of State HIU; NOAA National Centers for Environmental Information"]
   }
 }

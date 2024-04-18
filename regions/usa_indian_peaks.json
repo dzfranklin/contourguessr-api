@@ -16,6 +16,7 @@
       19.109257071265894, 9.554628535632947, 4.777314267948769,
       2.3886571339743794, 1.1943285668548997
     ],
-    "defaultResolution":  9.554628535632947
+    "defaultResolution":  9.554628535632947,
+    "extraAttributions": ["USFS, Esri, TomTom, FAO, NOAA, USGS"]
   }
 }
