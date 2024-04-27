@@ -1,7 +1,7 @@
 name: Deploy
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 jobs:
   build:
     name: Build
@@ -23,6 +23,7 @@ jobs:
       - uses: docker/build-push-action@v3
         name: Build and push the docker image
         with:
+          platforms: linux/arm64
           context: .
           push: true
           tags: |
@@ -33,14 +34,21 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [ build ]
     steps:
-      - name: Set up kubectl
-        env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG }}
-        run: |
-          mkdir -p "$HOME/.kube"
-          echo $KUBECONFIG | tr -d '[:space:]' | base64 --decode > "$HOME/.kube/config"
+      - name: Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - uses: azure/k8s-set-context@v1
+        with:
+          method: service-account
+          k8s-url: "https://stork:6443"
+          k8s-secret: ${{ secrets.K8S_SECRET }}
+        id: setcontext
 
       - uses: actions/checkout@v4
 
