@@ -391,11 +391,13 @@ func (r *Repo) challengesUpdater(ctx context.Context) {
 
 func (r *Repo) updateChallenges(ctx context.Context) error {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, region_id, ST_X(geo::geometry), ST_Y(geo::geometry), title, description_html, date_taken, link,
-			preview_src, preview_width, preview_height, regular_src, regular_width, regular_height, large_src, large_width, large_height,
-			photographer_icon, photographer_text, photographer_link,
-			rx, ry
-		FROM challenges
+		SELECT c.id, c.region_id, ST_X(c.geo::geometry), ST_Y(c.geo::geometry), c.title, c.description_html, c.date_taken, c.link,
+			c.preview_src, c.preview_width, c.preview_height, c.regular_src, c.regular_width, c.regular_height, c.large_src, c.large_width, c.large_height,
+			c.photographer_icon, c.photographer_text, c.photographer_link,
+			c.rx, c.ry
+		FROM challenges as c
+		JOIN regions ON c.region_id = regions.id
+		WHERE regions.active
 	`)
 	if err != nil {
 		return err
