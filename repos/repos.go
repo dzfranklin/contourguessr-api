@@ -11,6 +11,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -31,10 +32,12 @@ type Repo struct {
 }
 
 type Challenge struct {
-	ID              string     `json:"id"`
-	RegionID        int        `json:"region_id"`
-	Lng             float64    `json:"lng"`
-	Lat             float64    `json:"lat"`
+	ID       string `json:"id"`
+	RegionID string `json:"region_id"`
+	Geo      struct {
+		Lng float64 `json:"lng"`
+		Lat float64 `json:"lat"`
+	} `json:"geo"`
 	Title           string     `json:"title"`
 	DescriptionHTML string     `json:"description"`
 	DateTaken       *time.Time `json:"date_taken"`
@@ -62,20 +65,22 @@ type PictureSrc struct {
 }
 
 type Region struct {
-	ID          int             `json:"id"`
+	ID          string          `json:"id"`
 	GeoJSON     json.RawMessage `json:"geo_json"`
 	Name        string          `json:"name"`
 	CountryISO2 string          `json:"country_iso2"`
 	LogoURL     string          `json:"logo_url"`
-	MinLng      float64         `json:"min_lng"`
-	MaxLng      float64         `json:"max_lng"`
-	MinLat      float64         `json:"min_lat"`
-	MaxLat      float64         `json:"max_lat"`
-	MapLayer    MapLayer        `json:"map_layer"`
+	BBox        struct {
+		MinLng float64 `json:"min_lng"`
+		MaxLng float64 `json:"max_lng"`
+		MaxLat float64 `json:"max_lat"`
+		MinLat float64 `json:"min_lat"`
+	} `json:"bbox"`
+	MapLayer MapLayer `json:"map_layer"`
 }
 
 type MapLayer struct {
-	ID                int       `json:"id"`
+	ID                string    `json:"id"`
 	Name              string    `json:"name"`
 	CapabilitiesXML   string    `json:"capabilities_xml"`
 	Layer             string    `json:"layer"`
@@ -217,10 +222,12 @@ func (r *Repo) updateRegions(ctx context.Context) error {
 	out := make(map[int]Region)
 	for rows.Next() {
 		var r Region
-		if err := rows.Scan(&r.ID, &r.GeoJSON, &r.Name, &r.CountryISO2, &r.LogoURL, &r.MinLng, &r.MaxLng, &r.MinLat, &r.MaxLat); err != nil {
+		var internalID int
+		if err := rows.Scan(&internalID, &r.GeoJSON, &r.Name, &r.CountryISO2, &r.LogoURL, &r.BBox.MinLng, &r.BBox.MaxLng, &r.BBox.MinLat, &r.BBox.MaxLat); err != nil {
 			return err
 		}
-		out[r.ID] = r
+		r.ID = strconv.FormatInt(int64(internalID), 10)
+		out[internalID] = r
 	}
 	rows.Close()
 
@@ -240,14 +247,16 @@ func (r *Repo) updateRegions(ctx context.Context) error {
 	mapLayers := make(map[int]*MapLayer)
 	for rows.Next() {
 		var ml MapLayer
+		var internalID int
 		var osBranding *bool
-		if err := rows.Scan(&ml.ID, &ml.Name, &ml.CapabilitiesXML, &ml.Layer, &ml.MatrixSet, &ml.Resolutions, &ml.DefaultResolution, &osBranding, &ml.ExtraAttributions); err != nil {
+		if err := rows.Scan(&internalID, &ml.Name, &ml.CapabilitiesXML, &ml.Layer, &ml.MatrixSet, &ml.Resolutions, &ml.DefaultResolution, &osBranding, &ml.ExtraAttributions); err != nil {
 			return err
 		}
+		ml.ID = strconv.FormatInt(int64(internalID), 10)
 		if osBranding != nil {
 			ml.OSBranding = *osBranding
 		}
-		mapLayers[ml.ID] = &ml
+		mapLayers[internalID] = &ml
 	}
 	rows.Close()
 
@@ -258,6 +267,10 @@ func (r *Repo) updateRegions(ctx context.Context) error {
 	}
 	for _, ml := range mapLayers {
 		wg.Add(1)
+		internalID, err := strconv.Atoi(ml.ID)
+		if err != nil {
+			panic(err)
+		}
 		go func(id int, url string) {
 			defer wg.Done()
 			xml, err := fetchCapabilities(ctx, &c, url)
@@ -269,7 +282,7 @@ func (r *Repo) updateRegions(ctx context.Context) error {
 			} else {
 				mapLayers[id].CapabilitiesXML = xml
 			}
-		}(ml.ID, ml.CapabilitiesXML)
+		}(internalID, ml.CapabilitiesXML)
 	}
 	wg.Wait()
 
@@ -393,7 +406,8 @@ func (r *Repo) updateChallenges(ctx context.Context) error {
 	for rows.Next() {
 		c := new(Challenge)
 		var internalID int
-		err := rows.Scan(&internalID, &c.RegionID, &c.Lng, &c.Lat, &c.Title, &c.DescriptionHTML, &c.DateTaken, &c.Link,
+		var internalRegionID int
+		err := rows.Scan(&internalID, &internalRegionID, &c.Geo.Lng, &c.Geo.Lat, &c.Title, &c.DescriptionHTML, &c.DateTaken, &c.Link,
 			&c.Src.Preview.Src, &c.Src.Preview.Width, &c.Src.Preview.Height,
 			&c.Src.Regular.Src, &c.Src.Regular.Width, &c.Src.Regular.Height,
 			&c.Src.Large.Src, &c.Src.Large.Width, &c.Src.Large.Height,
@@ -403,8 +417,9 @@ func (r *Repo) updateChallenges(ctx context.Context) error {
 			return err
 		}
 		c.ID = encodeChallengeID(internalID)
+		c.RegionID = strconv.FormatInt(int64(internalRegionID), 10)
 		challenges[internalID] = c
-		challengesByRegion[c.RegionID] = append(challengesByRegion[c.RegionID], c)
+		challengesByRegion[internalRegionID] = append(challengesByRegion[internalRegionID], c)
 	}
 
 	var regionsWithChallenges []int
