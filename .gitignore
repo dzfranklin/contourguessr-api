@@ -1,3 +1,4 @@
 *.local
 /data
 .idea
+.DS_Store
