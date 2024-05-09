@@ -178,6 +178,45 @@ func (r *Repo) ChallengesPerRegion() map[int]int {
 	return out
 }
 
+func (r *Repo) ChallengeDebugInfoJSON(ctx context.Context, id string) (string, error) {
+	out := make(map[string]interface{})
+	challenge, err := r.Challenge(id)
+	if err != nil {
+		return "", err
+	}
+	out["challenge"] = challenge
+
+	internalID, err := decodeChallengeID(id)
+	if err != nil {
+		return "", err
+	}
+	out["internal_id"] = internalID
+
+	var summary, info, sizes, exif json.RawMessage
+	var insertedAt *time.Time
+	err = r.db.QueryRow(ctx, `
+		SELECT p.summary, p.info, p.sizes, p.exif, p.inserted_at
+		FROM flickr_photos as p
+		JOIN flickr_challenge_sources as src ON p.flickr_id = src.flickr_id
+		WHERE src.challenge_id = $1
+	`, internalID).Scan(&summary, &info, &sizes, &exif, &insertedAt)
+	if err != nil {
+		return "", err
+	}
+	out["summary"] = summary
+	out["info"] = info
+	out["sizes"] = sizes
+	out["exif"] = exif
+	out["inserted_at"] = insertedAt
+
+	b, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
+}
+
 func (r *Repo) regionsUpdater(ctx context.Context) {
 	defer r.closeWg.Done()
 

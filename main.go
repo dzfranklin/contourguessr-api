@@ -69,6 +69,8 @@ func main() {
 	router.HandleFunc("/healthz", handleHealthz)
 	router.Handle("/metrics", promhttp.Handler())
 
+	router.HandleFunc("/debug/challenge", handleDebugChallenge).Methods("GET")
+
 	router.HandleFunc("/api/v1/region", handleGetRegions).Methods("GET")
 	router.HandleFunc("/api/v1/challenge/random", handleGetRandomChallenge).Methods("GET")
 	router.HandleFunc("/api/v1/challenge/{id}", handleGetChallenge).Methods("GET")
@@ -137,6 +139,18 @@ func handleGetChallenge(w http.ResponseWriter, r *http.Request) {
 func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("OK"))
+}
+
+func handleDebugChallenge(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	info, err := repo.ChallengeDebugInfoJSON(r.Context(), id)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(info))
 }
 
 func apiAllowCORSMiddleware(next http.Handler) http.Handler {
