@@ -403,7 +403,7 @@ func (r *Repo) updateChallenges(ctx context.Context) error {
 			return err
 		}
 		c.ID = encodeChallengeID(internalID)
-		challenges[c.RegionID] = c
+		challenges[internalID] = c
 		challengesByRegion[c.RegionID] = append(challengesByRegion[c.RegionID], c)
 	}
 

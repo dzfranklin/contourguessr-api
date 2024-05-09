@@ -5,6 +5,7 @@ import (
 	"contourguessr-api/repos"
 	"encoding/json"
 	"errors"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -60,16 +62,20 @@ func main() {
 
 	go updateChallengesPerRegionCounter()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", handleHealthz)
-	mux.Handle("/metrics", promhttp.Handler())
-	mux.Handle("GET /api/v1/region", allowCorsMiddleware(http.HandlerFunc(handleGetRegions)))
-	mux.Handle("GET /api/v1/challenge/random", allowCorsMiddleware(http.HandlerFunc(handleGetRandomChallenge)))
-	mux.Handle("GET /api/v1/challenge/:id", allowCorsMiddleware(http.HandlerFunc(handleGetChallenge)))
+	router := mux.NewRouter()
+
+	router.Use(apiAllowCORSMiddleware)
+
+	router.HandleFunc("/healthz", handleHealthz)
+	router.Handle("/metrics", promhttp.Handler())
+
+	router.HandleFunc("/api/v1/region", handleGetRegions).Methods("GET")
+	router.HandleFunc("/api/v1/challenge/random", handleGetRandomChallenge).Methods("GET")
+	router.HandleFunc("/api/v1/challenge/{id}", handleGetChallenge).Methods("GET")
 
 	addr := host + ":" + port
 	log.Println("listening on", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	log.Fatal(http.ListenAndServe(addr, router))
 }
 
 func handleGetRegions(w http.ResponseWriter, _ *http.Request) {
@@ -114,7 +120,7 @@ func handleGetRandomChallenge(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetChallenge(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id := mux.Vars(r)["id"]
 	challenge, err := repo.Challenge(id)
 	if errors.Is(err, repos.ChallengeNotFoundError) {
 		http.Error(w, "challenge not found", http.StatusNotFound)
@@ -133,10 +139,12 @@ func handleHealthz(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("OK"))
 }
 
-func allowCorsMiddleware(next http.Handler) http.Handler {
+func apiAllowCORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "*")
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "*")
+		}
 		next.ServeHTTP(w, r)
 	})
 }
