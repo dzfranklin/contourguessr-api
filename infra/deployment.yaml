@@ -91,26 +91,6 @@ spec:
       labels:
         app: api-server
     spec:
-      initContainers:
-        - name: fetch-data
-          image: amazon/aws-cli:2.15.38
-          command: [ "aws", "s3", "sync", "s3://contourguessr-data", "/data" ]
-          volumeMounts:
-            - name: data
-              mountPath: /data
-          env:
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: api-server-fetch-data-aws-credentials
-                  key: access-key-id
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: api-server-fetch-data-aws-credentials
-                  key: secret-access-key
-            - name: AWS_DEFAULT_REGION
-              value: "eu-west-2"
       containers:
         - name: api-server
           image: ghcr.io/dzfranklin/contourguessr-api:latest
@@ -121,12 +101,3 @@ spec:
             httpGet:
               path: /healthz
               port: http
-          volumeMounts:
-            - name: data
-              mountPath: /data
-          env:
-            - name: DATA_DIR
-              value: "/data"
-      volumes:
-        - name: data
-          emptyDir: {}

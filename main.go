@@ -1,199 +1,152 @@
 package main
 
 import (
-	"bytes"
-	"embed"
+	"context"
+	"contourguessr-api/repos"
 	"encoding/json"
-	"io"
-	"io/fs"
+	"errors"
+	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
+	"time"
 )
 
-var appEnv = os.Getenv("APP_ENV")
+var repo *repos.Repo
 
-//go:embed regions
-var regionsEmbed embed.FS
-
-var regionData []json.RawMessage
-var pictureData = make(map[string]map[string]json.RawMessage)
-var pictureList = make(map[string][]string)
-
-func init() {
-	dataDir := os.Getenv("DATA_DIR")
-	if appEnv == "dev" {
-		if dataDir == "" {
-			dataDir = "./sample_data"
-		}
-	}
-	if dataDir == "" {
-		log.Fatal("DATA_DIR not set")
-	}
-
-	regionSet := make(map[string]struct{})
-	regionFiles, err := fs.ReadDir(regionsEmbed, "regions")
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, regionFile := range regionFiles {
-		contents, err := fs.ReadFile(regionsEmbed, "regions/"+regionFile.Name())
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var parsed struct {
-			Id string `json:"id"`
-		}
-		if err := json.Unmarshal(contents, &parsed); err != nil {
-			log.Fatal(err)
-		}
-		regionSet[parsed.Id] = struct{}{}
-		pictureList[parsed.Id] = make([]string, 0)
-		pictureData[parsed.Id] = make(map[string]json.RawMessage)
-
-		var data json.RawMessage
-		if err := json.Unmarshal(contents, &data); err != nil {
-			log.Fatal(err)
-		}
-		regionData = append(regionData, data)
-	}
-	sort.Slice(regionData, func(i, j int) bool {
-		var a, b struct {
-			Name string `json:"name"`
-		}
-		if err := json.Unmarshal(regionData[i], &a); err != nil {
-			log.Fatal(err)
-		}
-		if err := json.Unmarshal(regionData[j], &b); err != nil {
-			log.Fatal(err)
-		}
-		return a.Name < b.Name
-	})
-
-	picturesFile, err := os.ReadFile(dataDir + "/pictures.ndjson")
-	if err != nil {
-		log.Fatal("Failed to read pictures.ndjson", err)
-	}
-	dec := json.NewDecoder(bytes.NewReader(picturesFile))
-	for {
-		var data json.RawMessage
-		if err := dec.Decode(&data); err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal(err)
-		}
-
-		var parsed struct {
-			Region string `json:"region"`
-			ID     string `json:"id"`
-		}
-		if err := json.Unmarshal(data, &parsed); err != nil {
-			log.Fatal(err)
-		}
-
-		if _, ok := regionSet[parsed.Region]; !ok {
-			log.Printf("Skipping picture %s in unknown region %s", parsed.ID, parsed.Region)
-			continue
-		}
-
-		pictureList[parsed.Region] = append(pictureList[parsed.Region], parsed.ID)
-		pictureData[parsed.Region][parsed.ID] = data
-	}
-}
+var challengesPerRegionGauge = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: "contourguessr",
+		Name:      "challenges_per_region",
+		Help:      "Number of challenges partitioned by region",
+	},
+	[]string{"region"},
+)
 
 func main() {
-	log.Print("Starting server...")
-
-	log.Print("Available regions:")
-	for _, data := range regionData {
-		var region struct {
-			Id   string `json:"id"`
-			Name string `json:"name"`
-		}
-		if err := json.Unmarshal(data, &region); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("  %s: %d pictures", region.Name, len(pictureList[region.Id]))
+	err := godotenv.Load(".env", ".env.local")
+	if err != nil {
+		log.Println(err)
 	}
-	log.Print("")
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL not set")
+	}
 
 	host := os.Getenv("HOST")
 	if host == "" {
-		host = "localhost"
+		host = "0.0.0.0"
 	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	addr := host + ":" + port
-	log.Println("Listening on", addr)
 
-	mux := http.NewServeMux()
-
-	mux.Handle("GET /api/v1/region", http.HandlerFunc(RegionListHandler))
-	mux.Handle("GET /api/v1/picture/{region}/{id}", http.HandlerFunc(PictureHandler))
-
-	mux.Handle("GET /healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	}))
-
-	mux.HandleFunc("/", NotFoundHandler)
-
-	err := http.ListenAndServe(addr, mux)
+	db, err := pgxpool.Connect(context.Background(), databaseURL)
 	if err != nil {
-		panic(err)
-	}
-}
-
-func RegionListHandler(w http.ResponseWriter, r *http.Request) {
-	AllowCORS(w, r)
-	w.Header().Set("Content-Type", "application/json")
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(regionData); err != nil {
 		log.Fatal(err)
 	}
+
+	repo = repos.New(db)
+	repo.WaitUntilReady()
+
+	go updateChallengesPerRegionCounter()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", handleHealthz)
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("GET /api/v1/region", allowCorsMiddleware(http.HandlerFunc(handleGetRegions)))
+	mux.Handle("GET /api/v1/challenge/random", allowCorsMiddleware(http.HandlerFunc(handleGetRandomChallenge)))
+	mux.Handle("GET /api/v1/challenge/:id", allowCorsMiddleware(http.HandlerFunc(handleGetChallenge)))
+
+	addr := host + ":" + port
+	log.Println("listening on", addr)
+	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
-func PictureHandler(w http.ResponseWriter, r *http.Request) {
-	AllowCORS(w, r)
-	region := r.PathValue("region")
-	id := r.PathValue("id")
-	if region == "" || id == "" {
-		NotFoundHandler(w, r)
+func handleGetRegions(w http.ResponseWriter, _ *http.Request) {
+	regions := repo.Regions()
+	list := make([]repos.Region, 0, len(regions))
+	for _, region := range regions {
+		list = append(list, region)
 	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].ID < list[j].ID
+	})
 
-	if id == "random" {
-		pictures := pictureList[region]
-		if len(pictures) == 0 {
-			NotFoundHandler(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(list)
+}
+
+func handleGetRandomChallenge(w http.ResponseWriter, r *http.Request) {
+	var regionID *int
+	regionS := r.URL.Query().Get("region")
+	if regionS == "" {
+		regionID = nil
+	} else {
+		val, err := strconv.Atoi(regionS)
+		if err != nil {
+			http.Error(w, "invalid region_id", http.StatusBadRequest)
 			return
 		}
-		id = pictures[rand.Intn(len(pictures))]
-		w.Header().Set("Location", "/api/v1/picture/"+region+"/"+id)
-		w.WriteHeader(http.StatusFound)
+		regionID = &val
+	}
+
+	challenge, err := repo.RandomChallenge(regionID)
+	if errors.Is(err, repos.NoChallengesAvailableError) {
+		http.Error(w, "no challenges available", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	data, ok := pictureData[region][id]
-	if !ok {
-		NotFoundHandler(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(challenge)
+}
+
+func handleGetChallenge(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	challenge, err := repo.Challenge(id)
+	if errors.Is(err, repos.ChallengeNotFoundError) {
+		http.Error(w, "challenge not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(data)
+	_ = json.NewEncoder(w).Encode(challenge)
 }
 
-func AllowCORS(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "*")
+func handleHealthz(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("OK"))
 }
 
-func NotFoundHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	_, _ = w.Write([]byte("404 Not Found"))
+func allowCorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func updateChallengesPerRegionCounter() {
+	ticker := time.NewTicker(1 * time.Second)
+	for range ticker.C {
+		counts := repo.ChallengesPerRegion()
+		for region, count := range counts {
+			challengesPerRegionGauge.WithLabelValues(strconv.Itoa(region)).Set(float64(count))
+		}
+	}
 }
