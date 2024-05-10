@@ -250,7 +250,7 @@ func (r *Repo) updateRegions(ctx context.Context) error {
 	defer tx.Rollback(ctx)
 
 	rows, err := tx.Query(ctx, `
-		SELECT id, ST_AsGeoJSON(geo), name, country_iso2, logo_url, min_lng, max_lng, min_lat, max_lat
+		SELECT id, ST_AsGeoJSON(ST_ForcePolygonCW(geo::geometry)), name, country_iso2, logo_url, min_lng, max_lng, min_lat, max_lat
 		FROM regions
 		WHERE active
 	`)
