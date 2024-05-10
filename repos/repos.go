@@ -39,7 +39,7 @@ type Challenge struct {
 		Lat float64 `json:"lat"`
 	} `json:"geo"`
 	Title           string     `json:"title"`
-	DescriptionHTML string     `json:"description"`
+	DescriptionHTML string     `json:"description_html"`
 	DateTaken       *time.Time `json:"date_taken"`
 	Link            string     `json:"link"`
 	Src             struct {
