@@ -43,7 +43,6 @@ type Challenge struct {
 	DateTaken       *time.Time `json:"date_taken"`
 	Link            string     `json:"link"`
 	Src             struct {
-		Preview PictureSrc `json:"preview"`
 		Regular PictureSrc `json:"regular"`
 		Large   PictureSrc `json:"large"`
 	} `json:"src"`
@@ -449,7 +448,6 @@ func (r *Repo) updateChallenges(ctx context.Context) error {
 		var internalID int
 		var internalRegionID int
 		err := rows.Scan(&internalID, &internalRegionID, &c.Geo.Lng, &c.Geo.Lat, &c.Title, &c.DescriptionHTML, &c.DateTaken, &c.Link,
-			&c.Src.Preview.Src, &c.Src.Preview.Width, &c.Src.Preview.Height,
 			&c.Src.Regular.Src, &c.Src.Regular.Width, &c.Src.Regular.Height,
 			&c.Src.Large.Src, &c.Src.Large.Width, &c.Src.Large.Height,
 			&c.Photographer.Icon, &c.Photographer.Text, &c.Photographer.Link,
